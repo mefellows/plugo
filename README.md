@@ -9,7 +9,7 @@ First, create your plugin `struct`:
 
 thing.go:
 
-```golang
+```go
 type Thing struct {
 	Name string
 	Age  int
@@ -42,7 +42,7 @@ complete with configuration applied:
 
 main.go:
 
-```
+```go
 type MyPluginConfig struct {
 	Port   int
 	Name   string
