@@ -3,7 +3,7 @@
 Simple Plugin abstraction with built-in configuration capability. Plugo provides a simple API to register and lookup plugins, 
 and then inject configuration into them from a YAML/JSON configuration file.
 
-[![wercker status](https://app.wercker.com/status/ce66c708c6b2793260c5d7a13011719b/m "wercker status")](https://app.wercker.com/project/bykey/ce66c708c6b2793260c5d7a13011719b)
+[![wercker status](https://app.wercker.com/status/ce66c708c6b2793260c5d7a13011719b/s "wercker status")](https://app.wercker.com/project/bykey/ce66c708c6b2793260c5d7a13011719b)
 
 ## Creating a Plugin
 
