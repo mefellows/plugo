@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -176,14 +177,36 @@ func (cl *ConfigLoader) Validate(iface interface{}) error {
 	for i := 0; i < ps.NumField(); i++ {
 		f := st.Field(i)
 		field := ps.FieldByName(f.Name)
+		dataKind := field.Kind()
+		var fValue interface{}
 
-		if cast.ToBool(f.Tag.Get("required")) == true && isZero(field) {
+		// Is an exported field, needs to
+		// start with an uppercase letter
+		fValue = getFieldValue(f.Name, field)
+		if !isExportedField(f.Name) {
+			continue
+		}
+
+		// Fail fast: bad regex on field
+		// Validate regex
+		regexStr := f.Tag.Get("regex")
+		var regex *regexp.Regexp
+		var err error
+		if regexStr != "" && dataKind != reflect.String {
+			return errors.New(fmt.Sprintf("Field '%s' has invalid 'regex' Tag '%s'. Regex can only be applied to string types", f.Name, regexStr))
+		} else if regexStr != "" {
+			regex, err = regexp.Compile(regexStr)
+			if err != nil {
+				return errors.New(fmt.Sprintf("Field '%s' has invalid regex '%s': %s", f.Name, regexStr, err.Error()))
+			}
+		}
+
+		if isZero(field) {
 			defaultVal := f.Tag.Get("default")
-			if defaultVal == "" {
+			if cast.ToBool(f.Tag.Get("required")) == true && defaultVal == "" {
 				return errors.New(fmt.Sprintf("Mandatory field '%s' has not been set, and has no provided default", f.Name))
 			}
 
-			dataKind := field.Kind()
 			field = reflect.ValueOf(iface).Elem().FieldByName(f.Name)
 			switch dataKind {
 			case reflect.Bool:
@@ -228,6 +251,13 @@ func (cl *ConfigLoader) Validate(iface interface{}) error {
 				return errors.New(fmt.Sprintf("Unsupported field '%s' of type: %s", f.Name, dataKind))
 			}
 
+		} else {
+			if regex != nil {
+				if !regex.MatchString(fValue.(string)) {
+					return errors.New(fmt.Sprintf("Regex validation failed on field '%s'. /%s/ does not match '%s'", f.Name, regexStr, fValue.(string)))
+				}
+			}
+
 		}
 	}
 	return nil
@@ -253,4 +283,18 @@ func isZero(v reflect.Value) bool {
 	// Compare other types directly:
 	z := reflect.Zero(v.Type())
 	return v.Interface() == z.Interface()
+}
+func isExportedField(name string) bool {
+	char := name[0]
+	if char >= 65 && char <= 90 {
+		return true
+	}
+	return false
+}
+func getFieldValue(name string, field reflect.Value) interface{} {
+	var val interface{}
+	if isExportedField(name) {
+		val = field.Interface()
+	}
+	return val
 }

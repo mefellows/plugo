@@ -121,3 +121,102 @@ symptoms:
 		t.Fatalf("Expected error, but did not get one")
 	}
 }
+
+func TestRawConfigToStructWithRegex(t *testing.T) {
+	var data = []byte(`
+port: 8080
+name: Foo
+symptoms:
+  - name: fire
+    config:
+      name: bar
+      port: 1234
+      complicated: http://www.foo.com
+`)
+
+	config := &Configuration{}
+	var input interface{}
+	cl := &ConfigLoader{}
+	cl.Load([]byte(data), config)
+	input = config.Symptoms[0].Config
+
+	type Foo struct {
+		Complicated string `regex:"^http(s)?:\\/\\/(www\\.)?([a-z]{0,62}(\\.[a-z]{2,}))+$"`
+	}
+
+	var f Foo = Foo{}
+
+	err := cl.ApplyConfig(input, &f)
+	if err != nil {
+		t.Fatalf("Did not expect error: %v", err)
+	}
+	err = cl.Validate(&f)
+	if err != nil {
+		t.Fatalf("Did not expect error, but got one: %s", err.Error())
+	}
+}
+
+func TestRawConfigToStructWithRegexFailedMatch(t *testing.T) {
+	var data = []byte(`
+port: 8080
+name: Foo
+symptoms:
+  - name: hell
+    config:
+      complicated: http://foo
+`)
+
+	config := &Configuration{}
+	var input interface{}
+	cl := &ConfigLoader{}
+	cl.Load([]byte(data), config)
+	input = config.Symptoms[0].Config
+
+	type Foo struct {
+		Complicated string `regex:"^http(s)?:\\/\\/(www\\.)?([a-z]{0,62}(\\.[a-z]{2,}))+$"`
+	}
+
+	var f Foo = Foo{}
+	input = config.Symptoms[0].Config
+
+	err := cl.ApplyConfig(input, &f)
+	if err != nil {
+		t.Fatalf("Did not expect error: %v", err)
+	}
+	err = cl.Validate(&f)
+	if err == nil {
+		t.Fatalf("Expected error, but did not get one")
+	}
+}
+
+func TestRawConfigToStructWithBadRegex(t *testing.T) {
+	var data = []byte(`
+port: 8080
+name: Foo
+symptoms:
+  - name: hell
+    config:
+      complicated: http://foo
+`)
+
+	config := &Configuration{}
+	var input interface{}
+	cl := &ConfigLoader{}
+	cl.Load([]byte(data), config)
+
+	type Foo struct {
+		Complicated string `regex:"^[0-9]+$"`
+	}
+
+	var f Foo = Foo{}
+	input = config.Symptoms[0].Config
+
+	err := cl.ApplyConfig(input, &f)
+	if err != nil {
+		t.Fatalf("Did not expect error: %v", err)
+	}
+	err = cl.Validate(&f)
+	if err == nil {
+		t.Fatalf("Expected error, but did not get one")
+	}
+}
