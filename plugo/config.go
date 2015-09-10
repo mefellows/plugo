@@ -201,9 +201,11 @@ func (cl *ConfigLoader) Validate(iface interface{}) error {
 			}
 		}
 
-		if isZero(field) {
-			defaultVal := f.Tag.Get("default")
-			if cast.ToBool(f.Tag.Get("required")) == true && defaultVal == "" {
+		required := cast.ToBool(f.Tag.Get("required")) == true
+		defaultVal := f.Tag.Get("default")
+
+		if (required == true || defaultVal != "") && isZero(field) {
+			if required == true && defaultVal == "" && isZero(field) {
 				return errors.New(fmt.Sprintf("Mandatory field '%s' has not been set, and has no provided default", f.Name))
 			}
 
