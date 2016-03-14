@@ -1,8 +1,6 @@
 package plugo
 
 // Generic plugin infrastructure
-// TODO: Move this into its own project?
-
 import (
 	"log"
 	"reflect"
